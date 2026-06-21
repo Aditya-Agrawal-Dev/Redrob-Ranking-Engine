@@ -1,37 +1,33 @@
 # Redrob Hackathon — Submission Metadata
-# Fill in YOUR actual details below — team_name, contact info, github_repo,
-# sandbox_link, compute environment must reflect what you actually used.
-# The methodology_summary and ai_usage_summary are pre-drafted from the
-# actual implementation; edit them to be accurate to your final repo.
 
-team_name: "your-team-name-here"
+team_name: "Aditya_Agrawal"
 
 primary_contact:
-  name: "Full Name"
-  email: "primary@example.com"
-  phone: "+91-XXXXXXXXXX"
+  name: "Aditya Agrawal"
+  email: "adityaagrawal1219@gmail.com"
+  phone: "+91-9340493526"
 
 team_members:
-  - name: "Member 1 Full Name"
-    email: "member1@example.com"
+  - name: "Aditya Agrawal"
+    email: "adityaagrawal1219@gmail.com"
     role: "ML Engineer"
 
-github_repo: "https://github.com/YOUR_USERNAME/YOUR_REPO"
+github_repo: "https://github.com/Aditya-Agrawal-Dev/Redrob-Ranking-Engine"
 
-sandbox_link: "https://huggingface.co/spaces/YOUR_USERNAME/redrob-ranker"
-# Required by spec section 10.5. This repo intentionally has no UI per your
-# instructions, so the simplest path is a minimal HF Space / Colab notebook
-# that just calls rank.py on a small (<=100) candidate sample and shows the
-# output CSV — not a dashboard, just a reproducibility checkpoint.
+sandbox_link: "https://colab.research.google.com/github/Aditya-Agrawal-Dev/Redrob-Ranking-Engine/blob/main/notebooks/redrob_sandbox.ipynb"
+# Opens directly from GitHub — no separate sharing/permissions step needed
+# as long as the repo itself is public. Runs rank.py end-to-end on the
+# organizers' own 50-candidate sample_candidates.json (committed in the
+# repo as samples/sample_candidates.jsonl) and validates the output.
 
 reproduce_command: "python rank.py --candidates ./candidates.jsonl --out ./submission.csv"
 
 compute:
-  platform: "FILL IN — e.g. MacBook Pro M2 / AWS EC2 c5.4xlarge"
-  cpu_cores: 0
-  ram_gb: 0
-  python_version: "3.x"
-  os: "FILL IN"
+  platform: "Windows PC"
+  cpu_cores: 8
+  ram_gb: 16
+  python_version: "3.11"
+  os: "Windows"
   uses_gpu_for_inference: false
   has_network_during_ranking: false
   pre_computation_required: false
@@ -39,14 +35,20 @@ compute:
 
 ai_tools_used:
   - "Claude"
+  - "ChatGPT"
+  - "Cursor"
 
 ai_usage_summary: |
   Used Claude for architecture design, code implementation, and test design
   across the scoring pipeline (TF-IDF similarity, feature extraction,
   honeypot/disqualifier detection, reasoning generation). All logic was
   reviewed, run against the full released candidate pool, and validated
-  with the provided validate_submission.py. No candidate data was sent to
-  any external API — the ranking step itself makes no network calls.
+  with the provided validate_submission.py. ChatGPT was used for
+  supplementary support outside the core scoring codebase (drafting and
+  reviewing submission documentation). Cursor was used as the code editor
+  for local debugging and formatting of the codebase. No candidate data
+  was sent to any external API — the ranking step itself makes no network
+  calls.
 
 methodology_summary: |
   Rule-based + TF-IDF hybrid ranker, deliberately avoiding the skills array
@@ -54,16 +56,40 @@ methodology_summary: |
   TF-IDF text similarity (JD vs. candidate summary/career descriptions),
   title relevance (regex against actual job titles held, not skills),
   production-ML and eval-rigor evidence (keyword hits inside career
-  descriptions only), experience-band fit, and location fit. This is
-  multiplied by a behavioral modifier (response rate, activity recency,
-  interview completion, notice period) and gated by a severity-weighted
-  honeypot detector (impossible skill-duration combos, career-month/YOE
-  mismatches, malformed date ranges) and a disqualifier detector matching
-  the JD's explicit "do not want" list (pure research, consulting-only,
-  CV/speech-only without NLP/IR, title-chasing, senior-non-coding).
-  Verified 0% honeypot rate and 0 keyword-stuffer titles in the produced
-  top-100 over the full released 100K-candidate pool. Runtime ~60-100s,
-  CPU only, no network calls during ranking.
+  descriptions only, including retrieval/vector-DB terms, LLM fine-tuning
+  terms (LoRA/QLoRA/PEFT), and learning-to-rank terms (XGBoost/ranker)),
+  experience-band fit, and location fit. Weights: text_similarity 0.34,
+  title_relevance 0.20, production_evidence 0.23, eval_evidence 0.10,
+  experience_fit 0.10, location_fit 0.03 (location intentionally
+  downweighted since the JD states it as a soft preference, not a gate).
+  This is multiplied by a behavioral modifier (response rate, activity
+  recency, interview completion, notice period) and gated by a
+  severity-weighted honeypot detector requiring at least 2 independent
+  anomaly flags before applying the strongest penalty (a single flag, e.g.
+  a YOE/career-span mismatch on a long-tenured candidate whose listed
+  career_history doesn't cover their full career, is treated as a mild
+  caution discount only, not disqualifying) and a disqualifier detector
+  matching the JD's explicit "do not want" list (pure research,
+  consulting-only, CV/speech-only without NLP/IR, title-chasing,
+  senior-non-coding). Verified 0% honeypot-suspect rate and 0
+  keyword-stuffer titles in the produced top-100 over the full released
+  100K-candidate pool, and verified by direct audit that every candidate
+  holding one of the dataset's 11 rarest, most JD-aligned career-history
+  templates either ranks in the top 100 or is legitimately down-weighted
+  for low platform engagement (not lost to a scoring bug). Runtime
+  ~90-150s on the full 100K-candidate pool, CPU only, no network calls
+  during ranking.
+
+  Revision note: an earlier version of this scoring system had a bug where
+  a single honeypot anomaly flag (out of the system's 6 checkable anomaly
+  types) could trigger the maximum honeypot penalty alone. This produced
+  false positives on long-tenured candidates whose career_history field
+  (which the schema only requires to have 1-10 entries) didn't cover their
+  full work history. Fixed by requiring at least 2 independent flags before
+  the strongest penalty applies; single flags now apply only a mild 0.85x
+  discount. Separately, two production-evidence term categories
+  (LLM fine-tuning terms, learning-to-rank terms) were defined in config
+  but never wired into the scoring function; this has been fixed.
 
 declarations:
   read_submission_spec: true
