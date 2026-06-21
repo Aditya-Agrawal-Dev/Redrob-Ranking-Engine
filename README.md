@@ -119,5 +119,4 @@ own machine's specifics before submitting.
 
 This codebase was built with Claude as a pair-programming/architecture
 collaborator. See `submission_metadata.yaml` for the full declaration.
-Fill in the honest summary of your own usage before submitting — don't
-just copy this file's text.
+
